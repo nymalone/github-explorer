@@ -5,7 +5,7 @@ import api from '../../services/api';
 
 import logoImg from '../../assets/logo.svg';
 
-import { Title, Form, Repositories } from './styles';
+import { Title, Form, Repositories, Error } from './styles';
 
 interface Repository {
   // crio a tipagem só do que eu vou utilizar
@@ -19,6 +19,7 @@ interface Repository {
 
 const Dashboard: React.FC = () => {
   const [newRepo, setNewRepo] = useState(''); // vai armazenar o valor do input
+  const [inputError, setInputError] = useState('');
   const [repositories, setRepositories] = useState<Repository[]>([]);
 
   // adição de novos repositórios
@@ -29,12 +30,23 @@ const Dashboard: React.FC = () => {
   ): Promise<void> {
     event.preventDefault(); // vou prevenir o evento padrão do meu form
 
-    const response = await api.get(`repos/${newRepo}`); // o formato é o seguinte -> https://api.github.com/repos/nymalone/github-explorer então eu espero que o newRepo é o valor que o usuário digita que é nymalone/github-explorer
+    // caso haja submit vazio
+    if (!newRepo) {
+      setInputError('Digite autor/nome do repositório');
+      return;
+    }
 
-    const repository = response.data;
+    try {
+      const response = await api.get(`repos/${newRepo}`); // o formato é o seguinte -> https://api.github.com/repos/nymalone/github-explorer então eu espero que o newRepo é o valor que o usuário digita que é nymalone/github-explorer
 
-    setRepositories([...repositories, repository]); // respeitando os conceitos de imutabilidade, só quero add o que eu acabei de pesquisar
-    setNewRepo(''); // para limpar meu input após o submit
+      const repository = response.data;
+
+      setRepositories([...repositories, repository]); // respeitando os conceitos de imutabilidade, só quero add o que eu acabei de pesquisar
+      setNewRepo(''); // para limpar meu input após o submit
+      setInputError('');
+    } catch (err) {
+      setInputError('Erro na busca por esse respositório.');
+    }
   }
 
   return (
@@ -42,7 +54,7 @@ const Dashboard: React.FC = () => {
       <img src={logoImg} alt="logo" />
       <Title>Explore repositórios no Github</Title>
 
-      <Form onSubmit={handleAddRepository}>
+      <Form hasError={!!inputError} onSubmit={handleAddRepository}>
         <input
           value={newRepo}
           onChange={e => setNewRepo(e.target.value)} // aqui vai estar o valor do meu inpur
@@ -50,6 +62,8 @@ const Dashboard: React.FC = () => {
         />
         <button type="submit">Pesquisar</button>
       </Form>
+
+      {inputError && <Error>{inputError}</Error>}
 
       <Repositories>
         {repositories.map(repository => (
